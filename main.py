@@ -1,57 +1,52 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from docxtpl import DocxTemplate
 import os
+import uuid
 
 app = FastAPI()
 
-# Configuração de CORS (se for necessário para testes locais ou GPT Actions)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Em produção, use domínio restrito
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Cria a pasta para os documentos gerados (se não existir)
+OUTPUT_DIR = "generated"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 @app.post("/gerar-documento")
 async def gerar_documento(payload: dict):
     try:
-        # Carrega o template (certifique-se de que template.docx está na raiz do projeto)
-        doc = DocxTemplate("template.docx")
+        # Carrega o template
+        template_path = "template.docx"
+        if not os.path.exists(template_path):
+            return JSONResponse(status_code=500, content={"error": "Arquivo template.docx não encontrado."})
 
-        # Renderiza o template com os dados recebidos
+        # Preenche o documento com os dados recebidos
+        doc = DocxTemplate(template_path)
         doc.render(payload)
 
-        # Caminho de saída do documento gerado
-        output_path = "ultimo.docx"
+        # Gera nome único e salva o documento
+        filename = f"{uuid.uuid4().hex}.docx"
+        output_path = os.path.join(OUTPUT_DIR, filename)
         doc.save(output_path)
 
-        # Retorna link de download
+        # URL pública para download
+        url_publica = f"https://api-render-docx.onrender.com/download/{filename}"
+
         return {
             "message": "Documento gerado com sucesso.",
-            "download_url": "/download/ultimo"
+            "download_url": url_publica
         }
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.get("/download/ultimo")
-async def download_documento():
-    file_path = "ultimo.docx"
-    if not os.path.exists(file_path):
-        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+@app.get("/download/{filename}")
+async def download(filename: str):
+    path = os.path.join(OUTPUT_DIR, filename)
+
+    if not os.path.exists(path):
+        return JSONResponse(status_code=404, content={"error": "Arquivo não encontrado."})
 
     return FileResponse(
-        file_path,
+        path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        filename="proposta_tecnica.docx"
+        filename="documento_gerado.docx"
     )
-
-@app.post("/gerar-documento")
-async def gerar_documento(payload: dict):
-    doc = DocxTemplate("template.docx")
-    doc.render(payload)
-    doc.save("ultimo.docx")
-    return {"message": "Documento gerado com sucesso.", "download_url": "/download/ultimo"}
