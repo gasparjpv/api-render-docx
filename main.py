@@ -1,38 +1,36 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from docxtpl import DocxTemplate
-import os
-import uuid
+import os, uuid
 
 app = FastAPI()
 
-# Cria a pasta para os documentos gerados (se não existir)
+# Diretório onde os arquivos gerados serão salvos
 OUTPUT_DIR = "generated"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 @app.post("/gerar-documento")
 async def gerar_documento(payload: dict):
     try:
-        # Carrega o template
-        template_path = "template.docx"
-        if not os.path.exists(template_path):
-            return JSONResponse(status_code=500, content={"error": "Arquivo template.docx não encontrado."})
+        # Carrega o template (deve estar na raiz do projeto)
+        doc = DocxTemplate("template.docx")
 
-        # Preenche o documento com os dados recebidos
-        doc = DocxTemplate(template_path)
+        # Preenche o documento com os dados do payload
         doc.render(payload)
 
-        # Gera nome único e salva o documento
+        # Gera um nome único com extensão .docx
         filename = f"{uuid.uuid4().hex}.docx"
         output_path = os.path.join(OUTPUT_DIR, filename)
         doc.save(output_path)
 
-        # URL pública para download
-        url_publica = f"https://api-render-docx.onrender.com/download/{filename}"
+        # Logs de debug (opcional)
+        print("📁 Documento gerado em:", output_path)
+        print("📂 Conteúdo da pasta generated/:", os.listdir(OUTPUT_DIR))
 
+        # Retorna a URL pública para o GPT ou usuário final
         return {
             "message": "Documento gerado com sucesso.",
-            "download_url": url_publica
+            "download_url": f"https://api-render-docx.onrender.com/download/{filename}"
         }
 
     except Exception as e:
