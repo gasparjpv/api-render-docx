@@ -9,32 +9,34 @@ app = FastAPI()
 OUTPUT_DIR = "generated"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_PATH = os.path.join(BASE_DIR, "template.docx")
+
 @app.post("/gerar-documento")
 async def gerar_documento(payload: dict, request: Request):
+    await asyncio.sleep(5)  # Simula um delay
     try:
-        # Espera para permitir aprovação no GPT
-        await asyncio.sleep(2)
-
-        # Carrega o template e renderiza
-        doc = DocxTemplate("template.docx")
+        doc = DocxTemplate(TEMPLATE_PATH)
         doc.render(payload)
 
-        # Gera nome único e salva
         filename = f"{uuid.uuid4().hex}.docx"
-        output_path = os.path.join(OUTPUT_DIR, filename)
-        doc.save(output_path)
+        filepath = os.path.join(OUTPUT_DIR, filename)
+        doc.save(filepath)
 
-        # Log para debug (Render mostra isso nos logs)
-        print("✅ Documento salvo:", output_path)
-        print("📁 Arquivos no diretório 'generated':", os.listdir(OUTPUT_DIR))
-
-        # Monta URL de download com base no host real
-        download_url = f"{request.base_url}download/{filename}"
+        # monta a URL pública se existir, senão usa a base do request
+        PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
+        if PUBLIC_BASE_URL:
+            download_url = f"{PUBLIC_BASE_URL}/download/{filename}"
+        else:
+            download_url = f"{request.base_url}download/{filename}"
 
         return {
             "message": "Documento gerado com sucesso.",
             "download_url": download_url
         }
+    except Exception as e:
+        return {"error": str(e)}
+
 
     except Exception as e:
         print("❌ Erro ao gerar documento:", e)
