@@ -1,0 +1,44 @@
+# Ignore virtual environments
+venv/
+.env/
+.venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Byte-compiled / optimized / DLL files
+*.so
+*.dll
+*.dylib
+
+# macOS
+.DS_Store
+
+# VSCode settings (optional)
+.vscode/
+
+# Python test cache
+.pytest_cache/
+.cache/
+
+# Output files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Docs builds
+_build/
+dist/
+build/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS-generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
