@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from docxtpl import DocxTemplate
 import os, uuid
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 app = FastAPI()
 OUTPUT_DIR = "generated"
@@ -42,3 +44,17 @@ async def download(filename: str):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename="documento_gerado.docx"
     )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    try:
+        body = await request.body()
+    except:
+        body = b""
+    print(f"--> {request.method} {request.url}")
+    print(f"Headers: {dict(request.headers)}")
+    if body:
+        print(f"Body: {body[:2000].decode(errors='ignore')}")
+    response = await call_next(request)
+    print(f"<-- {response.status_code} {request.url.path}")
+    return response
