@@ -1,48 +1,50 @@
-from fastapi import FastAPI, Response
-from pydantic import BaseModel
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from docxtpl import DocxTemplate
-import io
 import os
 
 app = FastAPI()
 
-# MODELOS DE DADOS
-class Etapa(BaseModel):
-    numero: str
-    titulo: str
-    itens: list[str]
+# Configuração de CORS (se for necessário para testes locais ou GPT Actions)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Em produção, use domínio restrito
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-class Topico(BaseModel):
-    titulo: str
-    descricao: str
-
-class DadosDocx(BaseModel):
-    cenarioAtual: str
-    objetivoDosServicos: str
-    solucaoProposta: list[Etapa]
-    escopoDeAtividades: str
-    premissasExecucao: str
-    cronogramaMacro: list[Topico]
-    suposicoes: str
-    foraDoEscopo: str
-
-# ENDPOINT
 @app.post("/gerar-documento")
-def gerar_documento(dados: DadosDocx):
-    # Caminho para o template (deve estar na raiz do projeto)
-    template_path = "template.docx"
+async def gerar_documento(payload: dict):
+    try:
+        # Carrega o template (certifique-se de que template.docx está na raiz do projeto)
+        doc = DocxTemplate("template.docx")
 
-    # Gera o documento preenchido
-    doc = DocxTemplate(template_path)
-    doc.render(dados.dict())
+        # Renderiza o template com os dados recebidos
+        doc.render(payload)
 
-    # Salva em memória (em vez de arquivo)
-    buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
+        # Caminho de saída do documento gerado
+        output_path = "ultimo.docx"
+        doc.save(output_path)
 
-    return Response(
-        content=buffer.read(),
+        # Retorna link de download
+        return {
+            "message": "Documento gerado com sucesso.",
+            "download_url": "/download/ultimo"
+        }
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/download/ultimo")
+async def download_documento():
+    file_path = "ultimo.docx"
+    if not os.path.exists(file_path):
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+    return FileResponse(
+        file_path,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": "attachment; filename=documento-preenchido.docx"}
+        filename="proposta_tecnica.docx"
     )
