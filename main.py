@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from docxtpl import DocxTemplate
 import os, uuid
-import asyncio
 
 app = FastAPI()
 
@@ -14,7 +13,6 @@ TEMPLATE_PATH = os.path.join(BASE_DIR, "template.docx")
 
 @app.post("/gerar-documento")
 async def gerar_documento(payload: dict, request: Request):
-    await asyncio.sleep(5)  # Simula um delay
     try:
         doc = DocxTemplate(TEMPLATE_PATH)
         doc.render(payload)
