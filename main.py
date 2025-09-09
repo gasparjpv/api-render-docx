@@ -48,3 +48,10 @@ async def download_documento():
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename="proposta_tecnica.docx"
     )
+
+@app.post("/gerar-documento")
+async def gerar_documento(payload: dict):
+    doc = DocxTemplate("template.docx")
+    doc.render(payload)
+    doc.save("ultimo.docx")
+    return {"message": "Documento gerado com sucesso.", "download_url": "/download/ultimo"}
